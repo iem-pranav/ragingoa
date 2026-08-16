@@ -1,0 +1,54 @@
+{
+  "run_at": "2026-08-16T17:37:26.294662+00:00",
+  "num_requests_attempted": 50,
+  "num_requests_succeeded": 50,
+  "num_errors": 0,
+  "errors": [],
+  "status_breakdown": {
+    "ok": 41,
+    "blocked_ungrounded": 5,
+    "error": 4
+  },
+  "provider_breakdown": {
+    "groq": 46,
+    "none": 4
+  },
+  "client_side_latency_ms": {
+    "p50": 1446.8,
+    "p70": 1587.4,
+    "p100": 2502.3,
+    "mean": 1470.4,
+    "n": 50
+  },
+  "server_stage_latency_ms": {
+    "stt": {
+      "p50": 476.2,
+      "p70": 532.0,
+      "p100": 1371.6,
+      "mean": 510.5,
+      "n": 50
+    },
+    "retrieval": {
+      "p50": 593.3,
+      "p70": 610.0,
+      "p100": 1182.5,
+      "mean": 617.6,
+      "n": 50
+    },
+    "generation": {
+      "p50": 203.4,
+      "p70": 239.5,
+      "p100": 484.9,
+      "mean": 221.1,
+      "n": 46
+    },
+    "total": {
+      "p50": 1289.8,
+      "p70": 1434.8,
+      "p100": 2152.5,
+      "mean": 1335.3,
+      "n": 46
+    }
+  },
+  "note": "Benchmarked by cycling through 10 pre-recorded representative question(s), not 50 unique recordings - documented here for transparency, not hidden."
+}
