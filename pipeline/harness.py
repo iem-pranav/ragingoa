@@ -76,7 +76,7 @@ def run_pipeline(
     if not safety_check.passed:
         return PipelineResult(
             status="blocked_unsafe_input",
-            answer="I can't help with that request.",
+            answer="That's not something I can help with here.",
             transcript=transcript,
             detected_language=detected_language,
             latency_ms=timings,
@@ -101,7 +101,7 @@ def run_pipeline(
     if not confidence_check.passed:
         return PipelineResult(
             status="blocked_low_confidence",
-            answer="I don't have enough grounded information to answer that confidently.",
+            answer="I couldn't find anything confident enough in my knowledge base to answer that — try rephrasing, or ask something closer to the dataset's topics.",
             transcript=transcript,
             detected_language=detected_language,
             sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
@@ -136,8 +136,8 @@ def run_pipeline(
         return PipelineResult(
             status="blocked_ungrounded",
             answer=(
-                "I found related information but couldn't produce a fully grounded answer. "
-                "Here's what was retrieved:\n\n" + "\n\n".join(context_texts[:3])
+                "I found some related passages, but couldn't stitch together a fully grounded answer. "
+                "Here's what came up instead:\n\n" + "\n\n".join(context_texts[:3])
             ),
             transcript=transcript,
             detected_language=detected_language,
