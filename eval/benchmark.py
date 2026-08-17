@@ -20,7 +20,7 @@ import time
 from datetime import datetime, timezone
 import requests
 
-API_URL = "https://ragingoa-ecru.vercel.app/"   # swap to your deployed Vercel URL once live
+API_URL = "https://ragingoa-ecru.vercel.app/api/query"
 TEST_AUDIO_DIR = "test_audios"                 # folder of a few representative recordings
 NUM_REQUESTS = 50
 STRATEGY = "metadata"
