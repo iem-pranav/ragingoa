@@ -2,6 +2,7 @@
 
 .env
 .venv/
+pylance/
 
 # dependencies
 /node_modules
