@@ -2,7 +2,8 @@
 
 .env
 .venv/
-pylance/
+__pycache__/
+*.pyc
 
 # dependencies
 /node_modules
