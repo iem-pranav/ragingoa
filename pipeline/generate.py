@@ -26,7 +26,8 @@ if not GROQ_API_KEY:
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY not found - check your .env file")
 
-GROQ_MODEL = "llama-3.1-8b-instant"
+# GROQ_MODEL = "llama-3.1-8b-instant"
+GROQ_MODEL = "openai/gpt-oss-20b"
 GEMINI_MODEL = "gemini-3.7-flash"   # pinned version, not a "-latest" alias (those can silently change under you)
 
 _groq_client = Groq(api_key=GROQ_API_KEY, max_retries=0)
