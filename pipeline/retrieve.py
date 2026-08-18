@@ -28,8 +28,28 @@ COLLECTION_NAMES = {
     "metadata": "rag_chunks_metadata",
 }
 
-_chroma_client = chromadb.CloudClient(api_key=CHROMA_API_KEY)
-_embed_model = SentenceTransformer(EMBED_MODEL_NAME)   # loaded once, reused across calls
+_chroma_client = None
+_embed_model = None
+
+
+def _get_chroma_client():
+    """Lazy singleton - creating this at module import time was blocking
+    Vercel's cold-start init phase (which has its own strict timeout,
+    separate from and shorter than maxDuration), causing intermittent
+    'Application initialization timed out' failures with no response at all."""
+    global _chroma_client
+    if _chroma_client is None:
+        _chroma_client = chromadb.CloudClient(api_key=CHROMA_API_KEY)
+    return _chroma_client
+
+
+def _get_embed_model():
+    """Lazy singleton - same reasoning as above. Loading ~470MB of weights
+    at import time was the main contributor to cold-start timeouts."""
+    global _embed_model
+    if _embed_model is None:
+        _embed_model = SentenceTransformer(EMBED_MODEL_NAME)
+    return _embed_model
 
 
 @dataclass
@@ -43,7 +63,7 @@ class RetrievedChunk:
 def _embed_query(query_text: str):
     # normalize_embeddings=True -> vectors are unit length, so cosine similarity
     # can be computed cheaply as (1 - squared_l2_distance / 2) below
-    return _embed_model.encode(["query: " + query_text], normalize_embeddings=True)[0].tolist()
+    return _get_embed_model().encode(["query: " + query_text], normalize_embeddings=True)[0].tolist()
 
 
 def retrieve(query_text: str, strategy: str = "metadata", top_k: int = 5) -> list[RetrievedChunk]:
@@ -55,7 +75,7 @@ def retrieve(query_text: str, strategy: str = "metadata", top_k: int = 5) -> lis
     if strategy not in COLLECTION_NAMES:
         raise ValueError(f"strategy must be one of {list(COLLECTION_NAMES)}, got {strategy!r}")
 
-    collection = _chroma_client.get_or_create_collection(COLLECTION_NAMES[strategy])
+    collection = _get_chroma_client().get_or_create_collection(COLLECTION_NAMES[strategy])
     query_embedding = _embed_query(query_text)
 
     result = collection.query(
