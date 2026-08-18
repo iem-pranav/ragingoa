@@ -52,7 +52,7 @@ def _timed(label: str, timings: dict, fn, *args, **kwargs):
 def run_pipeline(
     audio_path: str,
     strategy: str = "metadata",
-    top_k: int = 3,
+    top_k: int = 5,
     stt_mode: str = "transcribe",
 ) -> PipelineResult:
     timings = {}
