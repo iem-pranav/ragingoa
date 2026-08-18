@@ -69,7 +69,7 @@ def _generate_groq(prompt: str) -> str:
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,   # low temperature - we want grounded, not creative
-        max_tokens=200,
+        max_tokens=400,
     )
     return response.choices[0].message.content
 
