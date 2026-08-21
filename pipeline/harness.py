@@ -49,115 +49,204 @@ def _timed(label: str, timings: dict, fn, *args, **kwargs):
     return result
 
 
-def run_pipeline(
-    audio_path: str,
-    strategy: str = "metadata",
-    top_k: int = 5,
-    stt_mode: str = "transcribe",
+# def run_pipeline(
+#     audio_path: str,
+#     strategy: str = "metadata",
+#     top_k: int = 5,
+#     stt_mode: str = "transcribe",
+# ) -> PipelineResult:
+#     timings = {}
+#     overall_start = time.perf_counter()
+
+#     # ── Stage 1: STT ──────────────────────────────────────────────
+#     try:
+#         stt_result: STTResult = _timed("stt", timings, transcribe, audio_path, stt_mode)
+#     except Exception as e:
+#         return PipelineResult(
+#             status="error",
+#             error_message=f"STT failed: {e}",
+#             latency_ms=timings,
+#         )
+
+#     transcript = stt_result.transcript
+#     detected_language = stt_result.language_code
+
+#     # ── Stage 2: input safety gate ───────────────────────────────
+#     safety_check = check_input_safety(transcript)
+#     if not safety_check.passed:
+#         return PipelineResult(
+#             status="blocked_unsafe_input",
+#             answer="That's not something I can help with here.",
+#             transcript=transcript,
+#             detected_language=detected_language,
+#             latency_ms=timings,
+#         )
+
+#     # ── Stage 3: retrieval ────────────────────────────────────────
+#     try:
+#         chunks: list[RetrievedChunk] = _timed(
+#             "retrieval", timings, retrieve, transcript, strategy, top_k
+#         )
+#     except Exception as e:
+#         return PipelineResult(
+#             status="error",
+#             transcript=transcript,
+#             detected_language=detected_language,
+#             error_message=f"Retrieval failed: {e}",
+#             latency_ms=timings,
+#         )
+
+#     # ── Stage 4: retrieval-confidence gate (doubles as off-topic filter) ──
+#     confidence_check = check_retrieval_confidence(chunks)
+#     if not confidence_check.passed:
+#         return PipelineResult(
+#             status="blocked_low_confidence",
+#             answer="I couldn't find anything confident enough in my knowledge base to answer that — try rephrasing, or ask something closer to the dataset's topics.",
+#             transcript=transcript,
+#             detected_language=detected_language,
+#             sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
+#             latency_ms=timings,
+#             strategy_used=strategy,
+#         )
+
+#     # ── Stage 5: generation ──────────────────────────────────────
+#     context_texts = [c.text for c in chunks]
+#     try:
+#         gen_result: GenerationResult = _timed(
+#             "generation", timings, generate_answer, transcript, context_texts
+#         )
+#     except Exception as e:
+#         return PipelineResult(
+#             status="error",
+#             transcript=transcript,
+#             detected_language=detected_language,
+#             sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
+#             error_message=f"Generation failed (both providers): {e}",
+#             latency_ms=timings,
+#             strategy_used=strategy,
+#         )
+
+#     # ── Stage 6: groundedness gate ───────────────────────────────
+#     groundedness_check = check_groundedness(gen_result.answer, context_texts)
+#     timings["total"] = round((time.perf_counter() - overall_start) * 1000, 1)
+
+#     if not groundedness_check.passed:
+#         # graceful degradation per PRD §4: don't discard the work, hand back
+#         # the raw retrieved chunks with a disclaimer instead of a silent fail
+#         return PipelineResult(
+#             status="blocked_ungrounded",
+#             answer=(
+#                 "I found some related passages, but couldn't stitch together a fully grounded answer. "
+#                 "Here's what came up instead:\n\n" + "\n\n".join(context_texts[:3])
+#             ),
+#             transcript=transcript,
+#             detected_language=detected_language,
+#             sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
+#             provider_used=gen_result.provider_used,
+#             latency_ms=timings,
+#             strategy_used=strategy,
+#         )
+
+#     return PipelineResult(
+#         status="ok",
+#         answer=gen_result.answer,
+#         transcript=transcript,
+#         detected_language=detected_language,
+#         sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
+#         provider_used=gen_result.provider_used,
+#         latency_ms=timings,
+#         strategy_used=strategy,
+#     )
+
+def _run_from_transcript(
+    transcript: str,
+    detected_language: str | None,
+    strategy: str,
+    top_k: int,
+    timings: dict,
+    overall_start: float,
 ) -> PipelineResult:
-    timings = {}
-    overall_start = time.perf_counter()
+    """Shared continuation for both entry points, starting right after a
+    transcript already exists (whether from STT or typed directly)."""
 
-    # ── Stage 1: STT ──────────────────────────────────────────────
-    try:
-        stt_result: STTResult = _timed("stt", timings, transcribe, audio_path, stt_mode)
-    except Exception as e:
-        return PipelineResult(
-            status="error",
-            error_message=f"STT failed: {e}",
-            latency_ms=timings,
-        )
-
-    transcript = stt_result.transcript
-    detected_language = stt_result.language_code
-
-    # ── Stage 2: input safety gate ───────────────────────────────
     safety_check = check_input_safety(transcript)
     if not safety_check.passed:
         return PipelineResult(
             status="blocked_unsafe_input",
-            answer="That's not something I can help with here.",
+            answer="I can't help with that request.",
             transcript=transcript,
             detected_language=detected_language,
             latency_ms=timings,
         )
 
-    # ── Stage 3: retrieval ────────────────────────────────────────
     try:
-        chunks: list[RetrievedChunk] = _timed(
-            "retrieval", timings, retrieve, transcript, strategy, top_k
-        )
+        chunks: list[RetrievedChunk] = _timed("retrieval", timings, retrieve, transcript, strategy, top_k)
     except Exception as e:
         return PipelineResult(
-            status="error",
-            transcript=transcript,
-            detected_language=detected_language,
-            error_message=f"Retrieval failed: {e}",
-            latency_ms=timings,
+            status="error", transcript=transcript, detected_language=detected_language,
+            error_message=f"Retrieval failed: {e}", latency_ms=timings,
         )
 
-    # ── Stage 4: retrieval-confidence gate (doubles as off-topic filter) ──
     confidence_check = check_retrieval_confidence(chunks)
     if not confidence_check.passed:
         return PipelineResult(
             status="blocked_low_confidence",
-            answer="I couldn't find anything confident enough in my knowledge base to answer that — try rephrasing, or ask something closer to the dataset's topics.",
-            transcript=transcript,
-            detected_language=detected_language,
+            answer="I don't have enough grounded information to answer that confidently.",
+            transcript=transcript, detected_language=detected_language,
             sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
-            latency_ms=timings,
-            strategy_used=strategy,
+            latency_ms=timings, strategy_used=strategy,
         )
 
-    # ── Stage 5: generation ──────────────────────────────────────
     context_texts = [c.text for c in chunks]
     try:
-        gen_result: GenerationResult = _timed(
-            "generation", timings, generate_answer, transcript, context_texts
-        )
+        gen_result: GenerationResult = _timed("generation", timings, generate_answer, transcript, context_texts)
     except Exception as e:
         return PipelineResult(
-            status="error",
-            transcript=transcript,
-            detected_language=detected_language,
+            status="error", transcript=transcript, detected_language=detected_language,
             sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
             error_message=f"Generation failed (both providers): {e}",
-            latency_ms=timings,
-            strategy_used=strategy,
+            latency_ms=timings, strategy_used=strategy,
         )
 
-    # ── Stage 6: groundedness gate ───────────────────────────────
     groundedness_check = check_groundedness(gen_result.answer, context_texts)
     timings["total"] = round((time.perf_counter() - overall_start) * 1000, 1)
 
     if not groundedness_check.passed:
-        # graceful degradation per PRD §4: don't discard the work, hand back
-        # the raw retrieved chunks with a disclaimer instead of a silent fail
         return PipelineResult(
             status="blocked_ungrounded",
             answer=(
-                "I found some related passages, but couldn't stitch together a fully grounded answer. "
-                "Here's what came up instead:\n\n" + "\n\n".join(context_texts[:3])
+                "I found related information but couldn't produce a fully grounded answer. "
+                "Here's what was retrieved:\n\n" + "\n\n".join(context_texts[:3])
             ),
-            transcript=transcript,
-            detected_language=detected_language,
+            transcript=transcript, detected_language=detected_language,
             sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
-            provider_used=gen_result.provider_used,
-            latency_ms=timings,
-            strategy_used=strategy,
+            provider_used=gen_result.provider_used, latency_ms=timings, strategy_used=strategy,
         )
 
     return PipelineResult(
-        status="ok",
-        answer=gen_result.answer,
-        transcript=transcript,
-        detected_language=detected_language,
+        status="ok", answer=gen_result.answer, transcript=transcript, detected_language=detected_language,
         sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
-        provider_used=gen_result.provider_used,
-        latency_ms=timings,
-        strategy_used=strategy,
+        provider_used=gen_result.provider_used, latency_ms=timings, strategy_used=strategy,
     )
 
+
+def run_pipeline(audio_path: str, strategy: str = "metadata", top_k: int = 5, stt_mode: str = "transcribe") -> PipelineResult:
+    timings = {}
+    overall_start = time.perf_counter()
+    try:
+        stt_result: STTResult = _timed("stt", timings, transcribe, audio_path, stt_mode)
+    except Exception as e:
+        return PipelineResult(status="error", error_message=f"STT failed: {e}", latency_ms=timings)
+    return _run_from_transcript(stt_result.transcript, stt_result.language_code, strategy, top_k, timings, overall_start)
+
+
+def run_pipeline_from_text(text: str, strategy: str = "metadata", top_k: int = 5) -> PipelineResult:
+    """Text-input path - skips STT entirely. Same guardrails, retrieval,
+    generation, and response shape as the voice path; 'stt' is simply
+    absent from latency_ms since there's nothing to time there."""
+    timings = {}
+    overall_start = time.perf_counter()
+    return _run_from_transcript(text.strip(), None, strategy, top_k, timings, overall_start)
 
 if __name__ == "__main__":
     import sys
