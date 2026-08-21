@@ -145,7 +145,7 @@ export default function Home() {
           className="text-center mb-2"
           style={{ fontFamily: "var(--font-display)", fontSize: "2.25rem", fontWeight: 500, color: "#F7F1E3" }}
         >
-          RAGInGoa
+          VaniRAG
         </h1>
         <p className="text-center mb-10" style={{ color: "#9FBBAE", fontFamily: "var(--font-body)" }}>
           Ask something in English, Hindi, Marathi, or Tamil — speak or type.

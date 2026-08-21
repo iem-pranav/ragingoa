@@ -5,7 +5,7 @@ const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-display", weig
 const workSans = Work_Sans({ subsets: ["latin"], variable: "--font-body" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
-export const metadata = { title: "RAGInGoa", description: "Voice-enabled RAG over MSMARCO-XI", icons: {
+export const metadata = { title: "VaniRAG", description: "Voice-enabled RAG over MSMARCO-XI", icons: {
     icon: { url: "/favicon.webp", type: "image/webp" }, }, };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
