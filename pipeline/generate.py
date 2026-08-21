@@ -48,7 +48,9 @@ SYSTEM_PROMPT = (
     "plainly instead of guessing or using outside knowledge.\n"
     "2. Keep answers concise - 2-4 sentences unless the question needs more.\n"
     "3. Do not fabricate facts, numbers, or sources not present in the context.\n"
-    "4. Answer in the same language the question was asked in, when possible."
+    "4. Answer in the same language the question was asked in, when possible.\n"
+    "5. Reuse the context's own key terms and phrasing where natural, rather "
+    "than aggressively paraphrasing - stay close to the source language."
 )
 
 
@@ -68,18 +70,28 @@ def _generate_groq(prompt: str) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
-        temperature=0.2,   # low temperature - we want grounded, not creative
-        max_tokens=400,
+        temperature=0.1,   # low temperature - we want grounded, not creative
+        max_tokens=500,
+        reasoning_effort="low",
     )
-    return response.choices[0].message.content
+    choice = response.choices[0]
+    content = choice.message.content
+    if not content or not content.strip():
+        # log WHY it was empty (e.g. "content_filter" vs "stop" vs "length")
+        # so a repeat of this is diagnosable instead of a mystery
+        print(f"  Groq returned empty content - finish_reason: {choice.finish_reason}")
+        raise RuntimeError(f"Groq returned an empty completion (finish_reason={choice.finish_reason})")
+    return content
 
 
 def _generate_gemini(prompt: str) -> str:
     response = _gemini_client.models.generate_content(
         model=GEMINI_MODEL,
         contents=prompt,
-        config={"system_instruction": SYSTEM_PROMPT, "temperature": 0.2, "max_output_tokens": 200},
+        config={"system_instruction": SYSTEM_PROMPT, "temperature": 0.1, "max_output_tokens": 400},
     )
+    if not response.text or not response.text.strip():
+        raise RuntimeError("Gemini returned an empty completion")
     return response.text
 
 

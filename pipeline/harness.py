@@ -213,15 +213,12 @@ def _run_from_transcript(
 
     if not groundedness_check.passed:
         return PipelineResult(
-            status="blocked_ungrounded",
-            answer=(
-                "I found related information but couldn't produce a fully grounded answer. "
-                "Here's what was retrieved:\n\n" + "\n\n".join(context_texts[:3])
-            ),
-            transcript=transcript, detected_language=detected_language,
-            sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
-            provider_used=gen_result.provider_used, latency_ms=timings, strategy_used=strategy,
-        )
+        status="blocked_ungrounded",
+        answer="I don't have a confident, grounded answer to that based on what's in my knowledge base.",
+        transcript=transcript, detected_language=detected_language,
+        sources=[{"text": c.text, "similarity": c.similarity, "metadata": c.metadata} for c in chunks],
+        provider_used=gen_result.provider_used, latency_ms=timings, strategy_used=strategy,
+    )
 
     return PipelineResult(
         status="ok", answer=gen_result.answer, transcript=transcript, detected_language=detected_language,

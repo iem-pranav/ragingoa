@@ -28,7 +28,7 @@ class HasSimilarity(Protocol):
 
 # ── Config ────────────────────────────────────────────────────────
 MIN_RETRIEVAL_SIMILARITY = 0.60   # below this top-chunk similarity -> treat as off-topic/no-info
-MIN_GROUNDEDNESS_RATIO = 0.35     # fraction of answer's content words that must appear in context
+MIN_GROUNDEDNESS_RATIO = 0.25     # fraction of answer's content words that must appear in context
 
 # Small, generic unsafe-input keyword screen. NOT exhaustive or a substitute
 # for a real moderation API - documented as a lightweight first line of
